@@ -1,0 +1,8 @@
+{
+  "name": "Notey-Realtime",
+  "description": "Effortless dictation powered by AI. Turn long rambling recordings into perfectly transcribed notes.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "prompt": ""
+}
