@@ -1,4 +1,4 @@
-# Run and deploy your AI Studio app
+# Real-time Voice Transcription -> Notes
 
 This contains everything you need to run your app locally.
 
