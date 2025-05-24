@@ -9,7 +9,7 @@ import {marked} from 'marked';
 
 const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
 const CHUNK_DURATION_MS = 15000; // 15 seconds for chunked recording for Gemini
-const LOCAL_WHISPER_URL = 'ws://localhost:8000/ws/transcribe'; // Default for realtime-transcription-fastrtc
+// const LOCAL_WHISPER_URL = 'ws://localhost:8000/ws/transcribe'; // Default for realtime-transcription-fastrtc - REMOVED
 
 type InferenceEngine = 'gemini' | 'localWhisper';
 
@@ -64,8 +64,14 @@ class VoiceNotesApp {
 
   private inferenceEngineToggleInputs: NodeListOf<HTMLInputElement>;
   private currentInferenceEngine: InferenceEngine = 'gemini';
-  private localWhisperSocket: WebSocket | null = null;
+  // private localWhisperSocket: WebSocket | null = null; // REMOVED
   private switchSelectionIndicator: HTMLSpanElement;
+
+  // Properties for WebRTC and EventSource
+  private peerConnection: RTCPeerConnection | null = null;
+  private webrtcId: string | null = null;
+  private transcriptionEventSource: EventSource | null = null;
+  private localApiBaseUrl: string = 'http://localhost:7860';
 
 
   constructor() {
@@ -184,12 +190,18 @@ class VoiceNotesApp {
 
   private setInferenceEngine(engine: InferenceEngine): void {
     if (this.isRecording) {
-      alert("Please stop recording before changing the inference engine.");
-      // Revert UI to current engine
-      this.inferenceEngineToggleInputs.forEach(input => {
-        input.checked = input.value === this.currentInferenceEngine;
-      });
-      return;
+      // If recording with localWhisper and trying to switch, stop localWhisper first.
+      if (this.currentInferenceEngine === 'localWhisper') {
+        alert("Switching engine: Local Whisper recording will be stopped.");
+        this.stopRecordingLocalWhisper(); // Stop local whisper
+      } else {
+        alert("Please stop the current Cloud recording before changing the inference engine.");
+        // Revert UI to current engine if it was a cloud recording
+        this.inferenceEngineToggleInputs.forEach(input => {
+          input.checked = input.value === this.currentInferenceEngine;
+        });
+        return;
+      }
     }
     this.currentInferenceEngine = engine;
     console.log(`Inference engine set to: ${this.currentInferenceEngine}`);
@@ -390,13 +402,13 @@ class VoiceNotesApp {
     if (!this.isRecording) {
       if (this.currentInferenceEngine === 'gemini') {
         await this.startRecordingGemini();
-      } else {
+      } else if (this.currentInferenceEngine === 'localWhisper') { // Added explicit check
         await this.startRecordingLocalWhisper();
       }
     } else {
       if (this.currentInferenceEngine === 'gemini') {
         await this.stopRecordingGemini();
-      } else {
+      } else if (this.currentInferenceEngine === 'localWhisper') { // Added explicit check
         await this.stopRecordingLocalWhisper();
       }
     }
@@ -749,174 +761,442 @@ class VoiceNotesApp {
     this.updateHasContent();
   }
 
-  // --- Local Whisper Recording & Transcription ---
+  // --- Local Whisper Recording & Transcription --- // REMOVED WebSocket based implementation
   private async startRecordingLocalWhisper(): Promise<void> {
-     if (this.hasContentInCurrentNote && !this.editorTitle.classList.contains('placeholder-active') && this.editorTitle.textContent !== (this.editorTitle.getAttribute('placeholder') || 'Untitled Note')) {
+    if (this.hasContentInCurrentNote && !this.editorTitle.classList.contains('placeholder-active') && this.editorTitle.textContent !== (this.editorTitle.getAttribute('placeholder') || 'Untitled Note')) {
         if (!confirm("Starting a new recording will clear the current note and title. Continue?")) {
             return;
         }
     }
     this.createNewNote('localWhisper');
     const date = new Date();
-    const defaultTitle = `Recording (Local) ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    const defaultTitle = `Recording (Local WebRTC) ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     this.editorTitle.textContent = defaultTitle;
     this.editorTitle.classList.remove('placeholder-active');
-
+    this.recordingStatus.textContent = 'Initializing Local WebRTC...';
 
     try {
-      this.audioChunks = [];
-       if (this.stream) { 
-        this.stream.getTracks().forEach(track => track.stop());
-        this.stream = null;
-      }
-      if (this.audioContext && this.audioContext.state !== 'closed') { 
-          await this.audioContext.close();
-          this.audioContext = null;
-      }
-      this.recordingStatus.textContent = 'Requesting microphone access...';
+      this.peerConnection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+      this.webrtcId = Math.random().toString(36).substring(7);
+
+      this.peerConnection.onicecandidate = async (event) => {
+        if (event.candidate) {
+          // Typically, ICE candidates are sent to the remote peer.
+          // For local server, often the offer/answer SDP contains all necessary candidates,
+          // or the server might not need individual ICE candidates if running on localhost.
+          // If the server expects trickle ICE, this is where you'd send them.
+          // console.log('ICE candidate:', event.candidate);
+        } else {
+          console.log('ICE gathering finished.');
+          // ICE gathering is complete, now send the offer if not already sent.
+          // In many simple WebRTC setups, the offer is sent immediately after setLocalDescription.
+        }
+      };
       
-      try {
-        this.stream = await navigator.mediaDevices.getUserMedia({audio: true});
-      } catch (err) {
-         console.warn("Standard getUserMedia failed, trying fallbacks:", err);
-        this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }});
-      }
-
-      this.recordingStatus.textContent = 'Connecting to local Whisper...';
-      this.localWhisperSocket = new WebSocket(LOCAL_WHISPER_URL);
-
-      this.localWhisperSocket.onopen = () => {
-        this.recordingStatus.textContent = 'Connected to local Whisper. Recording...';
-        this.isRecording = true;
-        this.recordButton.classList.add('recording', 'local-recording');
-        this.recordButton.setAttribute('title', 'Stop Local Recording');
-        this.recordButton.setAttribute('aria-pressed', 'true');
-        
-        // Configure MediaRecorder to send data to WebSocket
-        // The local server needs to handle these chunks.
-        // This might need adjustment based on how realtime-transcription-fastrtc expects audio.
-        // For this example, sending base64 encoded chunks.
-        try {
-            this.mediaRecorder = new MediaRecorder(this.stream!, { mimeType: 'audio/webm; codecs=opus', audioBitsPerSecond: 48000 });
-        } catch (e) {
-            console.warn("audio/webm; codecs=opus, 48kbps not supported, trying default webm for MediaRecorder for local:", e);
-            try {
-                this.mediaRecorder = new MediaRecorder(this.stream!, { mimeType: 'audio/webm' });
-            } catch (e2) {
-                console.warn("audio/webm not supported, trying default MediaRecorder for local:", e2);
-                this.mediaRecorder = new MediaRecorder(this.stream!);
+      this.peerConnection.onconnectionstatechange = () => {
+        console.log('WebRTC Connection State:', this.peerConnection?.connectionState);
+        if (this.peerConnection) {
+            this.recordingStatus.textContent = `WebRTC: ${this.peerConnection.connectionState}`;
+            switch (this.peerConnection.connectionState) {
+                case 'connected':
+                    this.recordingStatus.textContent = 'Connected to Local WebRTC.';
+                    // Start MediaRecorder or other audio processing AFTER connection
+                    if (this.stream && !this.mediaRecorder) { // Ensure stream is available and MR not already started
+                        try {
+                             // We don't need MediaRecorder to send data to the server with WebRTC addTrack
+                             // But we might still want it for local saving of audio chunks if needed for export
+                            this.mediaRecorder = new MediaRecorder(this.stream, { mimeType: 'audio/webm' });
+                            this.mediaRecorder.ondataavailable = (event) => {
+                                if (event.data.size > 0) this.audioChunks.push(event.data);
+                            };
+                            this.mediaRecorder.start(1000); // Collect chunks every second
+                        } catch (e) {
+                            console.warn("Could not start MediaRecorder for local audio chunk saving:", e);
+                        }
+                    }
+                    break;
+                case 'failed':
+                case 'disconnected':
+                case 'closed':
+                    this.handleLocalWebRTCConnectionFailure();
+                    break;
             }
         }
-
-
-        this.mediaRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0 && this.localWhisperSocket && this.localWhisperSocket.readyState === WebSocket.OPEN) {
-            this.audioChunks.push(event.data); // Save for full export
-            // Send audio data to local whisper. Format may need to be raw PCM or specific encoding.
-            // For now, sending base64 string of the blob.
-            const base64AudioChunk = await this.fileToBase64(event.data);
-            this.localWhisperSocket.send(JSON.stringify({audio_data: base64AudioChunk, mime_type: event.data.type || 'audio/webm'}));
-          }
-        };
-        // Start media recorder with a small timeslice to stream frequently
-        this.mediaRecorder.start(1000); // Send data every 1 second. Adjust as needed.
-        this.startLiveDisplay();
-        this.updateHasContent();
       };
 
-      this.localWhisperSocket.onmessage = (event) => {
-        // Assuming server sends back JSON with a 'transcript' field
-        try {
-          const data = JSON.parse(event.data as string);
-          if (data.transcript) {
-            // Append to cumulative, but for local real-time, often it's better to replace or smartly append.
-            // For simplicity now, append.
-            this.cumulativeRawTranscription += data.transcript + ' ';
-            this.rawTranscription.textContent = this.cumulativeRawTranscription;
-            this.rawTranscription.scrollTop = this.rawTranscription.scrollHeight;
-            // If local, polished initially shows raw
-            this.polishedNote.textContent = this.cumulativeRawTranscription; 
-            if(this.currentNote) this.currentNote.rawTranscription = this.cumulativeRawTranscription;
-            if(this.currentNote) this.currentNote.polishedNote = this.cumulativeRawTranscription; // raw until polished by Gemini
-            this.updateHasContent();
-          }
-        } catch (e) {
-          console.warn('Non-JSON message from local Whisper or parse error:', event.data, e);
-          // It could be plain text transcript
-           if (typeof event.data === 'string') {
-             this.cumulativeRawTranscription += event.data + ' ';
-             this.rawTranscription.textContent = this.cumulativeRawTranscription;
-             this.rawTranscription.scrollTop = this.rawTranscription.scrollHeight;
-             this.polishedNote.textContent = this.cumulativeRawTranscription;
-             if(this.currentNote) this.currentNote.rawTranscription = this.cumulativeRawTranscription;
-             if(this.currentNote) this.currentNote.polishedNote = this.cumulativeRawTranscription;
-             this.updateHasContent();
-           }
-        }
-      };
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        console.warn("Standard getUserMedia failed, trying fallbacks for Local WebRTC:", err);
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      }
+      
+      this.setupAudioVisualizer(); // Uses this.stream
 
-      this.localWhisperSocket.onerror = (error) => {
-        console.error('Local Whisper WebSocket error:', error);
-        this.recordingStatus.textContent = 'Local Whisper connection error. Is it running?';
-        this.isRecording = false;
-        this.recordButton.classList.remove('recording', 'local-recording');
-        this.recordButton.setAttribute('title', 'Start Local Recording');
-        this.stopLiveDisplay();
-        if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
-            this.mediaRecorder.stop();
+      this.stream.getTracks().forEach(track => {
+        if (this.peerConnection) {
+            this.peerConnection.addTrack(track, this.stream!);
         }
-         if (this.stream) {
-          this.stream.getTracks().forEach(track => track.stop());
-          this.stream = null;
-        }
-      };
+      });
+      
+      // Optional: Data Channel
+      // const dataChannel = this.peerConnection.createDataChannel('text');
+      // dataChannel.onmessage = (event) => console.log('Data channel message (Local):', event.data);
+      // dataChannel.onopen = () => console.log('Data channel open (Local)');
+      // dataChannel.onclose = () => console.log('Data channel closed (Local)');
 
-      this.localWhisperSocket.onclose = () => {
-        if (this.isRecording) { // If closed unexpectedly during recording
-          this.recordingStatus.textContent = 'Local Whisper disconnected.';
-        }
-        // Finalize recording if it was ongoing
-        this.isRecording = false;
-        this.recordButton.classList.remove('recording', 'local-recording');
-        this.recordButton.setAttribute('title', 'Start Local Recording');
-        this.stopLiveDisplay();
-        if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
-            this.mediaRecorder.stop();
-        }
-         if (this.stream) {
-          this.stream.getTracks().forEach(track => track.stop());
-          this.stream = null;
-        }
-        this.updateHasContent(); // Update save buttons etc.
-      };
+
+      const offer = await this.peerConnection.createOffer();
+      await this.peerConnection.setLocalDescription(offer);
+
+      // Wait for ICE gathering to complete, or at least for some candidates to be gathered.
+      // For a local server, this might not be strictly necessary if all info is in SDP.
+      // await new Promise<void>(resolve => {
+      //   if (this.peerConnection?.iceGatheringState === 'complete') {
+      //     resolve();
+      //   } else {
+      //     this.peerConnection!.onicegatheringstatechange = () => {
+      //       if (this.peerConnection?.iceGatheringState === 'complete') resolve();
+      //     };
+      //   }
+      // });
+      // The above explicit wait for ice gathering might be too slow or unnecessary for local.
+      // Sending offer right after setLocalDescription is common.
+
+      this.recordingStatus.textContent = 'Sending offer to Local WebRTC server...';
+      const response = await fetch(`${this.localApiBaseUrl}/webrtc/offer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sdp: this.peerConnection.localDescription!.sdp,
+          type: this.peerConnection.localDescription!.type,
+          webrtc_id: this.webrtcId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Local WebRTC server rejected offer: ${response.status} ${errorText}`);
+      }
+
+      const serverAnswer = await response.json();
+      if (!serverAnswer.sdp || !serverAnswer.type) {
+        throw new Error('Invalid answer from Local WebRTC server');
+      }
+      
+      await this.peerConnection.setRemoteDescription(new RTCSessionDescription(serverAnswer));
+      this.recordingStatus.textContent = 'Remote description set. Establishing transcription stream...';
+      
+      this.establishTranscriptionEventSource(); // Call this after successful handshake
+
+      this.isRecording = true;
+      this.recordButton.classList.add('recording', 'local-recording');
+      this.recordButton.setAttribute('title', 'Stop Local Recording');
+      this.recordButton.setAttribute('aria-pressed', 'true');
+      this.startLiveDisplay(); // Includes setupAudioVisualizer if stream is ready
+      this.updateHasContent();
 
     } catch (error) {
-      this.handleRecordingError(error);
+      console.error('Error starting Local WebRTC recording:', error);
+      this.recordingStatus.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+      this.stopRecordingLocalWhisper(); // Clean up
+      this.handleRecordingError(error); // Generic error handler for UI updates
     }
   }
 
-  private async stopRecordingLocalWhisper(): Promise<void> {
-    if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
-      this.mediaRecorder.stop();
+  private establishTranscriptionEventSource(): void {
+    if (this.transcriptionEventSource) {
+      this.transcriptionEventSource.close();
     }
-    if (this.localWhisperSocket) {
-      if (this.localWhisperSocket.readyState === WebSocket.OPEN) {
-        this.localWhisperSocket.send(JSON.stringify({command: "stop"})); // Optional: send stop command
-        this.localWhisperSocket.close();
+
+    if (!this.webrtcId) {
+      console.error("Cannot establish transcription EventSource without a webrtcId.");
+      this.recordingStatus.textContent = "Error: Missing WebRTC ID for transcription.";
+      return;
+    }
+
+    const eventSourceUrl = `${this.localApiBaseUrl}/transcript?webrtc_id=${this.webrtcId}`;
+    console.log(`Connecting to EventSource: ${eventSourceUrl}`);
+    this.transcriptionEventSource = new EventSource(eventSourceUrl);
+
+    this.transcriptionEventSource.addEventListener('output', (event) => {
+      const messageEvent = event as MessageEvent;
+      const transcription = messageEvent.data;
+      
+      if (transcription) {
+        this.cumulativeRawTranscription += transcription + ' ';
+        this.rawTranscription.textContent = this.cumulativeRawTranscription;
+        this.rawTranscription.scrollTop = this.rawTranscription.scrollHeight;
+        
+        // For local whisper, polished note initially mirrors raw transcription.
+        // It can be later polished using Gemini if the user chooses.
+        this.polishedNote.textContent = this.cumulativeRawTranscription;
+        this.polishedNote.classList.remove('placeholder-active');
+
+
+        if (this.currentNote) {
+          this.currentNote.rawTranscription = this.cumulativeRawTranscription;
+          this.currentNote.polishedNote = this.cumulativeRawTranscription; 
+        }
+        this.updateHasContent();
       }
-      this.localWhisperSocket = null;
+    });
+
+    this.transcriptionEventSource.onerror = (err) => {
+      console.error('Transcription EventSource error:', err);
+      this.recordingStatus.textContent = 'Transcription connection error. Stream may have ended or server issue.';
+      // Consider if stopRecordingLocalWhisper should be called here. 
+      // If the server gracefully ends the stream, an error might be expected.
+      // If it's an unexpected error, then cleanup is good.
+      // For now, let's not auto-stop, as the server might close the EventSource when audio stops.
+      // this.stopRecordingLocalWhisper(); 
+      if (this.transcriptionEventSource) {
+          if (this.transcriptionEventSource.readyState === EventSource.CLOSED) {
+              console.log("EventSource was closed by server or due to error.");
+          }
+          this.transcriptionEventSource.close(); // Ensure it's closed on error
+          this.transcriptionEventSource = null;
+      }
+    };
+
+    this.transcriptionEventSource.onopen = () => {
+        console.log("Transcription EventSource connection opened.");
+        this.recordingStatus.textContent = "Transcription stream connected.";
+    };
+  }
+  // private async startRecordingLocalWhisper(): Promise<void> { // OLD WebSocket version
+  //    if (this.hasContentInCurrentNote && !this.editorTitle.classList.contains('placeholder-active') && this.editorTitle.textContent !== (this.editorTitle.getAttribute('placeholder') || 'Untitled Note')) { // OLD WebSocket version
+  //       if (!confirm("Starting a new recording will clear the current note and title. Continue?")) { // OLD WebSocket version
+  //           return;
+  //       }
+  //   }
+  //   this.createNewNote('localWhisper');
+  //   const date = new Date();
+  //   const defaultTitle = `Recording (Local) ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  //   this.editorTitle.textContent = defaultTitle;
+  //   this.editorTitle.classList.remove('placeholder-active');
+  //
+  //
+  //   try {
+  //     this.audioChunks = [];
+  //      if (this.stream) { 
+  //       this.stream.getTracks().forEach(track => track.stop());
+  //       this.stream = null;
+  //     }
+  //     if (this.audioContext && this.audioContext.state !== 'closed') { 
+  //         await this.audioContext.close();
+  //         this.audioContext = null;
+  //     }
+  //     this.recordingStatus.textContent = 'Requesting microphone access...';
+  //     
+  //     try {
+  //       this.stream = await navigator.mediaDevices.getUserMedia({audio: true});
+  //     } catch (err) {
+  //        console.warn("Standard getUserMedia failed, trying fallbacks:", err);
+  //       this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }});
+  //     }
+  //
+  //     this.recordingStatus.textContent = 'Connecting to local Whisper...';
+  //     this.localWhisperSocket = new WebSocket(LOCAL_WHISPER_URL);
+  //
+  //     this.localWhisperSocket.onopen = () => {
+  //       this.recordingStatus.textContent = 'Connected to local Whisper. Recording...';
+  //       this.isRecording = true;
+  //       this.recordButton.classList.add('recording', 'local-recording');
+  //       this.recordButton.setAttribute('title', 'Stop Local Recording');
+  //       this.recordButton.setAttribute('aria-pressed', 'true');
+  //       
+  //       // Configure MediaRecorder to send data to WebSocket
+  //       // The local server needs to handle these chunks.
+  //       // This might need adjustment based on how realtime-transcription-fastrtc expects audio.
+  //       // For this example, sending base64 encoded chunks.
+  //       try {
+  //           this.mediaRecorder = new MediaRecorder(this.stream!, { mimeType: 'audio/webm; codecs=opus', audioBitsPerSecond: 48000 });
+  //       } catch (e) {
+  //           console.warn("audio/webm; codecs=opus, 48kbps not supported, trying default webm for MediaRecorder for local:", e);
+  //           try {
+  //               this.mediaRecorder = new MediaRecorder(this.stream!, { mimeType: 'audio/webm' });
+  //           } catch (e2) {
+  //               console.warn("audio/webm not supported, trying default MediaRecorder for local:", e2);
+  //               this.mediaRecorder = new MediaRecorder(this.stream!);
+  //           }
+  //       }
+  //
+  //
+  //       this.mediaRecorder.ondataavailable = async (event) => {
+  //         if (event.data.size > 0 && this.localWhisperSocket && this.localWhisperSocket.readyState === WebSocket.OPEN) {
+  //           this.audioChunks.push(event.data); // Save for full export
+  //           // Send audio data to local whisper. Format may need to be raw PCM or specific encoding.
+  //           // For now, sending base64 string of the blob.
+  //           const base64AudioChunk = await this.fileToBase64(event.data);
+  //           this.localWhisperSocket.send(JSON.stringify({audio_data: base64AudioChunk, mime_type: event.data.type || 'audio/webm'}));
+  //         }
+  //       };
+  //       // Start media recorder with a small timeslice to stream frequently
+  //       this.mediaRecorder.start(1000); // Send data every 1 second. Adjust as needed.
+  //       this.startLiveDisplay();
+  //       this.updateHasContent();
+  //     };
+  //
+  //     this.localWhisperSocket.onmessage = (event) => {
+  //       // Assuming server sends back JSON with a 'transcript' field
+  //       try {
+  //         const data = JSON.parse(event.data as string);
+  //         if (data.transcript) {
+  //           // Append to cumulative, but for local real-time, often it's better to replace or smartly append.
+  //           // For simplicity now, append.
+  //           this.cumulativeRawTranscription += data.transcript + ' ';
+  //           this.rawTranscription.textContent = this.cumulativeRawTranscription;
+  //           this.rawTranscription.scrollTop = this.rawTranscription.scrollHeight;
+  //           // If local, polished initially shows raw
+  //           this.polishedNote.textContent = this.cumulativeRawTranscription; 
+  //           if(this.currentNote) this.currentNote.rawTranscription = this.cumulativeRawTranscription;
+  //           if(this.currentNote) this.currentNote.polishedNote = this.cumulativeRawTranscription; // raw until polished by Gemini
+  //           this.updateHasContent();
+  //         }
+  //       } catch (e) {
+  //         console.warn('Non-JSON message from local Whisper or parse error:', event.data, e);
+  //         // It could be plain text transcript
+  //          if (typeof event.data === 'string') {
+  //            this.cumulativeRawTranscription += event.data + ' ';
+  //            this.rawTranscription.textContent = this.cumulativeRawTranscription;
+  //            this.rawTranscription.scrollTop = this.rawTranscription.scrollHeight;
+  //            this.polishedNote.textContent = this.cumulativeRawTranscription;
+  //            if(this.currentNote) this.currentNote.rawTranscription = this.cumulativeRawTranscription;
+  //            if(this.currentNote) this.currentNote.polishedNote = this.cumulativeRawTranscription;
+  //            this.updateHasContent();
+  //          }
+  //       }
+  //     };
+  //
+  //     this.localWhisperSocket.onerror = (error) => {
+  //       console.error('Local Whisper WebSocket error:', error);
+  //       this.recordingStatus.textContent = 'Local Whisper connection error. Is it running?';
+  //       this.isRecording = false;
+  //       this.recordButton.classList.remove('recording', 'local-recording');
+  //       this.recordButton.setAttribute('title', 'Start Local Recording');
+  //       this.stopLiveDisplay();
+  //       if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
+  //           this.mediaRecorder.stop();
+  //       }
+  //        if (this.stream) {
+  //         this.stream.getTracks().forEach(track => track.stop());
+  //         this.stream = null;
+  //       }
+  //     };
+  //
+  //     this.localWhisperSocket.onclose = () => {
+  //       if (this.isRecording) { // If closed unexpectedly during recording
+  //         this.recordingStatus.textContent = 'Local Whisper disconnected.';
+  //       }
+  //       // Finalize recording if it was ongoing
+  //       this.isRecording = false;
+  //       this.recordButton.classList.remove('recording', 'local-recording');
+  //       this.recordButton.setAttribute('title', 'Start Local Recording');
+  //       this.stopLiveDisplay();
+  //       if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
+  //           this.mediaRecorder.stop();
+  //       }
+  //        if (this.stream) {
+  //         this.stream.getTracks().forEach(track => track.stop());
+  //         this.stream = null;
+  //       }
+  //       this.updateHasContent(); // Update save buttons etc.
+  //     };
+  //
+  //   } catch (error) {
+  //     this.handleRecordingError(error);
+  //   }
+  // }
+
+  // private async stopRecordingLocalWhisper(): Promise<void> {
+  //   if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
+  //     this.mediaRecorder.stop();
+  //   }
+  //   if (this.localWhisperSocket) {
+  //     if (this.localWhisperSocket.readyState === WebSocket.OPEN) {
+  //       this.localWhisperSocket.send(JSON.stringify({command: "stop"})); // Optional: send stop command
+  //       this.localWhisperSocket.close();
+  //     }
+  //     this.localWhisperSocket = null;
+  //   }
+  //   this.isRecording = false;
+  //   this.recordButton.classList.remove('recording', 'local-recording');
+  //   this.recordButton.setAttribute('title', 'Start Local Recording');
+  //   this.stopLiveDisplay();
+  //
+  //   this.recordingStatus.textContent = 'Local recording finished.';
+  //    if (this.stream) {
+  //       this.stream.getTracks().forEach(track => track.stop());
+  //       this.stream = null;
+  //   }
+  //   this.updateHasContent();
+  // } // OLD WebSocket version
+
+  private async stopRecordingLocalWhisper(): Promise<void> {
+    this.recordingStatus.textContent = 'Stopping local WebRTC recording...';
+
+    if (this.transcriptionEventSource) {
+      this.transcriptionEventSource.close();
+      this.transcriptionEventSource = null;
+      console.log('Transcription EventSource closed.');
     }
+
+    if (this.peerConnection) {
+      try {
+        this.peerConnection.getTransceivers().forEach(transceiver => {
+          if (transceiver.stop) { // Check if stop method exists
+            transceiver.stop();
+          }
+        });
+        this.peerConnection.close();
+        console.log('WebRTC PeerConnection closed.');
+      } catch (e) {
+        console.warn('Error while closing PeerConnection:', e);
+      } finally {
+        this.peerConnection = null;
+      }
+    }
+    
+    // Stop MediaRecorder if it was used for local chunk saving
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+        this.mediaRecorder.stop();
+        console.log('MediaRecorder stopped (local).');
+    }
+    // mediaRecorder will be set to null by stopLiveDisplay's audio context cleanup logic indirectly, 
+    // or if it's part of a broader cleanup, ensure it's nulled here too.
+
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+      console.log('MediaStream tracks stopped.');
+    }
+
+    // AudioContext is typically closed by stopLiveDisplay, ensure if not it's handled
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      await this.audioContext.close();
+      this.audioContext = null;
+      console.log('AudioContext closed.');
+    }
+
     this.isRecording = false;
     this.recordButton.classList.remove('recording', 'local-recording');
     this.recordButton.setAttribute('title', 'Start Local Recording');
-    this.stopLiveDisplay();
+    this.recordButton.setAttribute('aria-pressed', 'false');
+    
+    this.stopLiveDisplay(); // This also handles AudioContext cleanup if it was started by it
 
     this.recordingStatus.textContent = 'Local recording finished.';
-     if (this.stream) {
-        this.stream.getTracks().forEach(track => track.stop());
-        this.stream = null;
-    }
     this.updateHasContent();
+    this.webrtcId = null; // Clear the WebRTC ID
+  }
+
+  private handleLocalWebRTCConnectionFailure(): void {
+    console.error('Local WebRTC connection failed or disconnected.');
+    this.recordingStatus.textContent = 'Local WebRTC connection failed. Please check server and network.';
+    // Call stopRecordingLocalWhisper to ensure everything is cleaned up
+    // This will also reset UI states.
+    this.stopRecordingLocalWhisper(); 
   }
   
   private handleRecordingError(error: any): void {
