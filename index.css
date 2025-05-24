@@ -8,6 +8,7 @@
 }
 
 :root {
+  /* Base Dark Theme Colors */
   --color-bg-dark: #121212;
   --color-bg-alt-dark: #1E1E1E;
   --color-surface-dark: rgba(255, 255, 255, 0.05);
@@ -22,16 +23,19 @@
   --color-border-dark: rgba(255, 255, 255, 0.12);
   --color-recording-dark: #ff453a;
   --color-success-dark: #32d74b;
-  --color-local-dark: #ff9f43; /* Color for local engine UI elements */
+  --color-local-dark: #ff9f43;
 
   --glass-bg-dark: rgba(30, 30, 30, 0.6);
   --glass-border-dark: rgba(255, 255, 255, 0.15);
   --glass-highlight-dark: rgba(255, 255, 255, 0.1);
   --glass-shadow-dark: rgba(0, 0, 0, 0.3);
-
   --glass-recording-bg-dark: rgba(28, 28, 30, 0.75);
   --glass-recording-border-dark: rgba(255, 255, 255, 0.15);
+  --shadow-sm-dark: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md-dark: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg-dark: 0 8px 24px rgba(0, 0, 0, 0.4);
 
+  /* Base Light Theme Colors */
   --color-bg-light: #F7F7F7;
   --color-bg-alt-light: #EDEDED;
   --color-surface-light: #FFFFFF;
@@ -94,7 +98,7 @@
   --live-footer-height: 350px; /* Height of the live recording interface when fixed */
 }
 
-body.light-mode {
+body { /* Default to light theme variables initially */
   --color-bg: var(--color-bg-light);
   --color-bg-alt: var(--color-bg-alt-light);
   --color-surface: var(--color-surface-light);
@@ -122,6 +126,84 @@ body.light-mode {
   --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0,0,0,0.05);
 }
 
+
+body[data-theme="dark"] {
+  --color-bg: var(--color-bg-dark);
+  --color-bg-alt: var(--color-bg-alt-dark);
+  --color-surface: var(--color-surface-light);
+  --color-surface-hover: var(--color-surface-hover-light);
+  --color-surface-active: var(--color-surface-active-light);
+  --color-text: var(--color-text-light);
+  --color-text-secondary: var(--color-text-secondary-light);
+  --color-text-tertiary: var(--color-text-tertiary-light);
+  --color-accent: var(--color-accent-light);
+  --color-accent-alt: var(--color-accent-alt-light);
+  --color-cursor: var(--color-cursor-light);
+  --color-border: var(--color-border-light);
+  --color-recording: var(--color-recording-light);
+  --color-success: var(--color-success-light);
+  --color-local: var(--color-local-light);
+  --glass-bg: var(--glass-bg-light);
+  --glass-border: var(--glass-border-light);
+  --glass-highlight: var(--glass-highlight-light);
+  --glass-shadow: var(--glass-shadow-light);
+  --glass-recording-bg: var(--glass-recording-bg-light);
+  --glass-recording-border: var(--glass-recording-border-light);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0,0,0,0.03);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* == Theme Selector Styling == */
+.theme-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-select {
+  background-color: var(--glass-bg);
+  color: var(--color-text);
+  border: 1px solid var(--glass-border);
+  border-radius: 7px; /* Match tab/toggle buttons */
+  padding: 5px 10px; /* Similar to toggle labels */
+  font-size: 12px; /* Similar to toggle labels */
+  font-family: var(--font-primary);
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  -webkit-appearance: none; /* Remove default system appearance */
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23A8A8A8' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E"); /* Basic SVG arrow */
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px; /* Space for arrow */
+}
+body[data-theme="dark"] .dropdown-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23A8A8A8' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+body[data-theme="light"] .dropdown-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23666666' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+}
+
+
+.dropdown-select:hover {
+  border-color: var(--glass-highlight);
+  background-color: var(--color-surface-hover);
+}
+
+.dropdown-select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-alt-dark); /* Focus ring */
+}
+body[data-theme="light"] .dropdown-select:focus {
+  box-shadow: 0 0 0 2px var(--color-accent-alt-light); /* Focus ring */
+}
+/* Preserve existing styles for [contenteditable] */
 [contenteditable] {
   caret-color: var(--color-cursor);
 }
@@ -135,7 +217,7 @@ html {
   overflow: hidden; /* Prevent global scrollbars, app is self-contained */
 }
 
-body {
+body { /* Default theme applied here, will be overridden by data-theme */
   font-family: var(--font-primary);
   background-color: var(--color-bg);
   color: var(--color-text);
@@ -149,7 +231,476 @@ body {
   margin: 0;
 }
 
-.app-container {
+/* == Brutalist Theme == */
+[data-theme="brutalist"] {
+  --font-primary: Arial, Helvetica, sans-serif;
+  --font-mono: 'Courier New', Courier, monospace;
+
+  --color-bg: #FFFFFF;
+  --color-bg-alt: #F0F0F0;
+  --color-surface: #E0E0E0;
+  --color-surface-hover: #D0D0D0;
+  --color-surface-active: #C0C0C0;
+  --color-text: #000000;
+  --color-text-secondary: #333333;
+  --color-text-tertiary: #555555;
+  --color-accent: #FF0000; /* Stark red accent */
+  --color-accent-alt: #CC0000;
+  --color-cursor: #000000;
+  --color-border: #000000;
+  --color-recording: #FF0000;
+  --color-success: #00AA00;
+  --color-local: #0000FF;
+
+  --glass-bg: var(--color-surface); /* No glass effect in brutalist */
+  --glass-border: #000000;
+  --glass-highlight: #CCCCCC;
+  --glass-shadow: none;
+  --glass-recording-bg: var(--color-surface);
+  --glass-recording-border: #000000;
+
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+
+  --brutalist-border-style: 2px solid #000000;
+  --brutalist-radius: 0px;
+}
+
+[data-theme="brutalist"] body {
+  font-family: var(--font-primary);
+  letter-spacing: normal; /* Reset letter spacing for brutalist */
+}
+
+[data-theme="brutalist"] * {
+  border-radius: var(--brutalist-radius) !important; /* Force sharp corners */
+}
+
+[data-theme="brutalist"] .note-header,
+[data-theme="brutalist"] .recording-interface,
+[data-theme="brutalist"] .note-content-wrapper {
+  border-color: var(--color-border) !important;
+}
+
+[data-theme="brutalist"] .toggle-switch,
+[data-theme="brutalist"] .tab-navigation-container,
+[data-theme="brutalist"] .dropdown-select,
+[data-theme="brutalist"] .action-button,
+[data-theme="brutalist"] .record-button-inner,
+[data-theme="brutalist"] .polish-gemini-button,
+[data-theme="brutalist"] .note-content pre,
+[data-theme="brutalist"] .note-content code {
+  border: var(--brutalist-border-style) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: var(--color-bg-alt) !important; /* Ensure bg is consistent */
+  color: var(--color-text) !important;
+}
+[data-theme="brutalist"] .dropdown-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23000000' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
+}
+
+
+[data-theme="brutalist"] .toggle-switch .switch-selection,
+[data-theme="brutalist"] .active-tab-indicator {
+  background-color: var(--color-accent) !important;
+  border: none !important;
+}
+
+[data-theme="brutalist"] .toggle-switch input[type="radio"]:checked + .switch-label,
+[data-theme="brutalist"] .tab-button.active {
+  color: var(--color-bg) !important; /* Text on accent background - e.g., white if accent is dark */
+  background-color: var(--color-accent) !important;
+}
+
+[data-theme="brutalist"] .toggle-switch .switch-label,
+[data-theme="brutalist"] .tab-button {
+    color: var(--color-text) !important;
+    border: none !important; /* Remove borders from individual labels/buttons as container has it */
+}
+
+[data-theme="brutalist"] .record-button.recording .record-button-inner { background-color: var(--color-recording) !important; color: var(--color-bg) !important; }
+[data-theme="brutalist"] .record-button.local-recording .record-button-inner { background-color: var(--color-local) !important; color: var(--color-bg) !important;}
+[data-theme="brutalist"] .record-button:hover .record-button-inner { background-color: var(--color-surface-hover) !important; }
+[data-theme="brutalist"] .record-button.recording:hover .record-button-inner { background-color: var(--color-recording) !important; filter: brightness(1.2); }
+[data-theme="brutalist"] .record-button.local-recording:hover .record-button-inner { background-color: var(--color-local) !important; filter: brightness(1.2); }
+
+
+[data-theme="brutalist"] .polish-gemini-button {
+    background-color: var(--color-bg-alt) !important; /* Consistent with other buttons */
+    color: var(--color-text) !important;
+    border: var(--brutalist-border-style) !important;
+}
+[data-theme="brutalist"] .polish-gemini-button:hover {
+    background-color: var(--color-surface-hover) !important;
+    color: var(--color-text) !important;
+}
+
+[data-theme="brutalist"] ::-webkit-scrollbar-track { background: var(--color-bg-alt); border-left: var(--brutalist-border-style); }
+[data-theme="brutalist"] ::-webkit-scrollbar-thumb { background: var(--color-text-secondary); border: var(--brutalist-border-style); }
+[data-theme="brutalist"] ::-webkit-scrollbar-thumb:hover { background: var(--color-text); }
+
+
+/* == Skeuomorphic Theme == */
+@font-face {
+  font-family: 'Baskerville'; /* Example skeuomorphic font */
+  src: local('Baskerville'), local('Baskerville Old Face'), url('https://fonts.gstatic.com/s/librebaskerville/v14/kmKnZrc3Hgbbcjq75U4uslyuy4kn0qNZaxM.woff2') format('woff2'); /* Fallback to a web font if needed */
+}
+
+[data-theme="skeuomorphic"] {
+  --font-primary: 'Georgia', 'Times New Roman', serif; /* Serif font for body */
+  --font-mono: 'Courier New', Courier, monospace;
+
+  --color-bg: #EAE0D6; /* Light beige, like old paper */
+  --color-bg-alt: #D8CFC3; /* Slightly darker beige */
+  --color-surface: #FDF6EC; /* Creamy surface for notes */
+  --color-surface-hover: #FFFBF5;
+  --color-surface-active: #F5EFE5;
+  --color-text: #5D4037; /* Dark Brown */
+  --color-text-secondary: #795548; /* Medium Brown */
+  --color-text-tertiary: #A1887F; /* Light Brown */
+  --color-accent: #004D40; /* Dark Teal/Green for accents */
+  --color-accent-alt: #00695C;
+  --color-cursor: var(--color-accent);
+  --color-border: #BFB0A0; /* Softer border */
+  --color-recording: #C62828; /* Muted Red */
+  --color-success: #2E7D32; /* Muted Green */
+  --color-local: #AD8A56; /* Earthy tone for local */
+
+  --sk-button-bg: linear-gradient(to bottom, #FDF6EC, #EAE0D6);
+  --sk-button-border: #C1B2A3;
+  --sk-button-hover-bg: linear-gradient(to bottom, #FFFFFF, #F5EFE5);
+  --sk-button-active-bg: linear-gradient(to top, #FDF6EC, #EAE0D6);
+  --sk-radius: 8px; /* Slightly rounded corners */
+  --sk-shadow-inset: inset 0 1px 2px rgba(0,0,0,0.1), inset 0 -1px 1px rgba(255,255,255,0.5);
+  --sk-shadow-outset: 0 2px 3px rgba(0,0,0,0.2);
+  --sk-text-shadow: 1px 1px 0px rgba(255,255,255,0.5); /* Light text shadow for depth */
+
+  /* Override glass for skeuomorphism */
+  --glass-bg: var(--color-surface);
+  --glass-border: var(--sk-button-border);
+  --glass-highlight: var(--color-surface-hover);
+  --glass-shadow: var(--sk-shadow-outset);
+  --glass-recording-bg: var(--color-bg-alt);
+  --glass-recording-border: var(--sk-button-border);
+  
+  --shadow-sm: var(--sk-shadow-outset); /* Use skeuomorphic shadows */
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.3);
+  --shadow-lg: 0 8px 16px rgba(0,0,0,0.2), inset 0 2px 3px rgba(255,255,255,0.4);
+}
+
+[data-theme="skeuomorphic"] body {
+  font-family: var(--font-primary);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXWBgYGHh4d5eXlzc3NtbW1paWljY2NpaWlpYWFsbGxvb29wcHBxcXFpaWlhYWFsbGxubm5vb29vb29sbGxvbm5tbW1ubm5wbm5zcHJGRvtGAAAAFHRSTlMAAwkNEhQZGhscHSAgLys7TU9Wdn19jefyAAABdElEQVR42u3W2XKCMBAG4LVAxJcUfP8nPWokzSQs7dPS8/tHk2XfZA1Yd/d+7LdxeJ82/TQ3a3mrn+f1+Qat3/ebrvjZ73OcM7F/Xz/9N4GL8x/yYwA5AxyAHzJAAAdAATJIASIgBSQglQIEyAIC4AC2gA6QAXQgAaxAZSYgA2SDYAGYADZoFgA7IABkwQBswQBgAJEBOGBLAxkgG7YBcICpALsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAJkAWwCZAFsAmQBbAF2AwL/Jn8ATW03P0z/MyMAAAAASUVORK5CYII='); /* Subtle noise/texture */
+}
+
+[data-theme="skeuomorphic"] .note-header {
+  border-bottom: 1px solid var(--sk-button-border);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5); /* Top highlight */
+  background-color: var(--color-bg-alt); /* Give header a slightly different bg */
+  padding-bottom: 10px;
+  padding-top:10px;
+}
+
+[data-theme="skeuomorphic"] .editor-title,
+[data-theme="skeuomorphic"] .toggle-label,
+[data-theme="skeuomorphic"] .status-text,
+[data-theme="skeuomorphic"] .live-recording-title,
+[data-theme="skeuomorphic"] .live-recording-timer {
+  text-shadow: var(--sk-text-shadow);
+  color: var(--color-text);
+}
+
+[data-theme="skeuomorphic"] .toggle-switch,
+[data-theme="skeuomorphic"] .tab-navigation-container,
+[data-theme="skeuomorphic"] .dropdown-select,
+[data-theme="skeuomorphic"] .action-button,
+[data-theme="skeuomorphic"] .record-button-inner,
+[data-theme="skeuomorphic"] .polish-gemini-button {
+  background-image: var(--sk-button-bg);
+  border: 1px solid var(--sk-button-border);
+  border-radius: var(--sk-radius);
+  box-shadow: var(--sk-shadow-outset), var(--sk-shadow-inset);
+  color: var(--color-text-secondary);
+  backdrop-filter: none; /* Remove glass effect for skeuomorphism */
+  -webkit-backdrop-filter: none;
+  transition: background-image 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+[data-theme="skeuomorphic"] .dropdown-select {
+  background-image: var(--sk-button-bg), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%235D4037' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, right 8px center;
+}
+
+
+[data-theme="skeuomorphic"] .toggle-switch .switch-label,
+[data-theme="skeuomorphic"] .tab-button {
+  background: transparent;
+  box-shadow: none;
+  text-shadow: var(--sk-text-shadow);
+}
+
+[data-theme="skeuomorphic"] .toggle-switch .switch-selection,
+[data-theme="skeuomorphic"] .active-tab-indicator {
+  background-image: var(--sk-button-active-bg);
+  box-shadow: var(--sk-shadow-inset);
+  border: 1px solid var(--sk-button-border);
+  border-radius: calc(var(--sk-radius) - 2px); /* Slightly smaller radius for inset effect */
+}
+
+[data-theme="skeuomorphic"] .toggle-switch input[type="radio"]:checked + .switch-label,
+[data-theme="skeuomorphic"] .tab-button.active {
+  color: var(--color-text); /* Text color for active/selected items */
+  text-shadow: 0 1px 0px rgba(255,255,255,0.7); /* Stronger highlight for active text */
+}
+
+[data-theme="skeuomorphic"] .action-button:hover,
+[data-theme="skeuomorphic"] .record-button:hover .record-button-inner,
+[data-theme="skeuomorphic"] .polish-gemini-button:hover,
+[data-theme="skeuomorphic"] .dropdown-select:hover {
+  background-image: var(--sk-button-hover-bg);
+  box-shadow: var(--sk-shadow-outset), inset 0 1px 1px rgba(255,255,255,0.7);
+}
+[data-theme="skeuomorphic"] .action-button:active,
+[data-theme="skeuomorphic"] .record-button:active .record-button-inner,
+[data-theme="skeuomorphic"] .polish-gemini-button:active,
+[data-theme="skeuomorphic"] .dropdown-select:active {
+  background-image: var(--sk-button-active-bg);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 1px rgba(0,0,0,0.1); /* More pronounced inset */
+  transform: translateY(1px);
+}
+[data-theme="skeuomorphic"] .record-button.recording .record-button-inner,
+[data-theme="skeuomorphic"] .record-button.recording.local-recording .record-button-inner {
+  background-color: var(--color-recording); /* Simple solid color for recording to stand out */
+  background-image: none; /* Remove gradient when recording */
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  color: white;
+}
+[data-theme="skeuomorphic"] .record-button.local-recording .record-button-inner {
+    background-color: var(--color-local);
+}
+
+
+[data-theme="skeuomorphic"] .note-content-wrapper {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--sk-radius);
+  box-shadow: var(--sk-shadow-inset);
+  padding: 20px 40px; 
+}
+[data-theme="skeuomorphic"] .note-content {
+  background-color: transparent; 
+}
+[data-theme="skeuomorphic"] .note-content pre {
+  background-color: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--sk-shadow-inset);
+  border-radius: 4px;
+}
+[data-theme="skeuomorphic"] .note-content code {
+  background-color: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+}
+
+[data-theme="skeuomorphic"] ::-webkit-scrollbar { width: 12px; }
+[data-theme="skeuomorphic"] ::-webkit-scrollbar-track { background: var(--color-bg-alt); border-left: 1px solid var(--color-border); }
+[data-theme="skeuomorphic"] ::-webkit-scrollbar-thumb { background-color: #C1B2A3; border-radius: var(--sk-radius); border: 1px solid #A1887F; }
+[data-theme="skeuomorphic"] ::-webkit-scrollbar-thumb:hover { background-color: #A1887F; }
+
+
+/* == Retro Dark Theme == */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+[data-theme="retro-dark"] {
+  --font-primary: 'Press Start 2P', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-mono: 'Press Start 2P', 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --color-bg: #0A041F; /* Darker, more purple */
+  --color-bg-alt: #140C36; 
+  --color-surface: #20124D; 
+  --color-surface-hover: #2C1A66;
+  --color-surface-active: #38227F;
+  --color-text: #00FFCC; /* Cyan/Teal */
+  --color-text-secondary: #FF00FF; /* Magenta */
+  --color-text-tertiary: #7FFF00; /* Lime Green */
+  --color-accent: #FFD700; /* Gold */
+  --color-accent-alt: #FFA500; /* Orange */
+  --color-cursor: var(--color-text);
+  --color-border: var(--color-accent); /* Neon border */
+  --color-recording: #FF3EA5; /* Hot Pink */
+  --color-success: #50FA7B; /* Bright Green from Dracula */
+  --color-local: #82AAFF; /* Bright Blue */
+
+  --glass-bg: rgba(32, 18, 77, 0.6); /* Dark, translucent */
+  --glass-border: var(--color-accent);
+  --glass-highlight: rgba(255, 215, 0, 0.2); /* Gold highlight */
+  --glass-shadow: none; /* No complex shadows for retro */
+  --glass-recording-bg: rgba(32, 18, 77, 0.75);
+  --glass-recording-border: var(--color-recording);
+
+  --shadow-sm: 0 0 3px var(--color-accent-alt), 0 0 5px var(--color-accent-alt) inset; /* Inner glow */
+  --shadow-md: 0 0 7px var(--color-accent-alt), 0 0 10px var(--color-accent-alt) inset;
+  --shadow-lg: 0 0 10px var(--color-accent-alt), 0 0 15px var(--color-accent-alt) inset;
+  
+  --retro-text-shadow: 0 0 2px currentColor, 0 0 4px currentColor, 0 0 6px var(--color-accent-alt);
+  --retro-box-shadow: 0 0 5px var(--color-border), 0 0 10px var(--color-border) inset;
+}
+
+[data-theme="retro-dark"] body {
+  font-family: var(--font-primary);
+  font-size: 10px; /* Pixel fonts look better smaller */
+  line-height: 1.8; /* Adjust for pixel font readability */
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  text-shadow: var(--retro-text-shadow);
+  image-rendering: pixelated; /* For sharper pixel art if used */
+}
+[data-theme="retro-dark"] * {
+  border-radius: 0 !important; /* Sharp corners */
+  border-color: var(--color-border) !important; /* Global neon border for elements */
+}
+
+[data-theme="retro-dark"] .note-header,
+[data-theme="retro-dark"] .recording-interface {
+  border-style: solid;
+  border-width: 2px; /* Thicker border */
+  box-shadow: var(--retro-box-shadow);
+}
+[data-theme="retro-dark"] .recording-interface {
+    background-color: var(--color-bg-alt); /* Give it a slight bg */
+}
+
+
+[data-theme="retro-dark"] .editor-title,
+[data-theme="retro-dark"] .toggle-label,
+[data-theme="retro-dark"] .status-text,
+[data-theme="retro-dark"] .live-recording-title,
+[data-theme="retro-dark"] .live-recording-timer,
+[data-theme="retro-dark"] .tab-button,
+[data-theme="retro-dark"] .switch-label,
+[data-theme="retro-dark"] .dropdown-select,
+[data-theme="retro-dark"] .action-button i,
+[data-theme="retro-dark"] .polish-gemini-button i,
+[data-theme="retro-dark"] .record-button-inner i {
+  font-family: var(--font-mono) !important; /* Force mono font */
+  text-shadow: var(--retro-text-shadow);
+  color: var(--color-text) !important; /* Ensure high contrast */
+}
+[data-theme="retro-dark"] .dropdown-select option {
+    background-color: var(--color-bg-alt);
+    color: var(--color-text);
+}
+
+[data-theme="retro-dark"] .toggle-switch,
+[data-theme="retro-dark"] .tab-navigation-container,
+[data-theme="retro-dark"] .dropdown-select,
+[data-theme="retro-dark"] .action-button,
+[data-theme="retro-dark"] .record-button-inner,
+[data-theme="retro-dark"] .polish-gemini-button {
+  background-color: var(--color-surface) !important;
+  border: 2px solid var(--color-border) !important;
+  box-shadow: var(--retro-box-shadow) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+[data-theme="retro-dark"] .dropdown-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2300FFEA' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important; /* Cyan arrow */
+}
+
+
+[data-theme="retro-dark"] .toggle-switch .switch-selection,
+[data-theme="retro-dark"] .active-tab-indicator {
+  background-color: var(--color-accent) !important;
+  box-shadow: 0 0 3px var(--color-accent) !important;
+  border: none !important;
+}
+
+[data-theme="retro-dark"] .toggle-switch input[type="radio"]:checked + .switch-label,
+[data-theme="retro-dark"] .tab-button.active {
+  color: var(--color-bg) !important; 
+  background-color: var(--color-accent) !important;
+  text-shadow: none; 
+}
+
+[data-theme="retro-dark"] .action-button:hover,
+[data-theme="retro-dark"] .record-button:hover .record-button-inner,
+[data-theme="retro-dark"] .polish-gemini-button:hover,
+[data-theme="retro-dark"] .dropdown-select:hover {
+  background-color: var(--color-surface-hover) !important;
+  border-color: var(--color-accent-alt) !important;
+  box-shadow: 0 0 8px var(--color-accent-alt) !important;
+}
+
+[data-theme="retro-dark"] .record-button.recording .record-button-inner { background-color: var(--color-recording) !important; color: var(--color-bg) !important; border-color: var(--color-recording) !important; }
+[data-theme="retro-dark"] .record-button.local-recording .record-button-inner { background-color: var(--color-local) !important; color: var(--color-bg) !important; border-color: var(--color-local) !important;}
+
+[data-theme="retro-dark"] .note-content-wrapper {
+  background-color: var(--color-bg-alt);
+  border: 2px solid var(--color-border);
+  box-shadow: var(--retro-box-shadow);
+}
+[data-theme="retro-dark"] .note-content {
+  color: var(--color-text);
+  text-shadow: var(--retro-text-shadow);
+}
+[data-theme="retro-dark"] .note-content h1, 
+[data-theme="retro-dark"] .note-content h2, 
+[data-theme="retro-dark"] .note-content h3 {
+  color: var(--color-accent);
+  text-shadow: 0 0 5px var(--color-accent);
+}
+[data-theme="retro-dark"] .note-content a { color: var(--color-text-secondary); text-decoration: underline;}
+[data-theme="retro-dark"] .note-content pre, 
+[data-theme="retro-dark"] .note-content code {
+  background-color: #000000;
+  border: 1px dashed var(--color-text-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+[data-theme="retro-dark"] ::-webkit-scrollbar-thumb { background: var(--color-accent); border: 1px solid var(--color-border); }
+[data-theme="retro-dark"] ::-webkit-scrollbar-track { background: #000; border-left: 1px solid var(--color-border); }
+
+
+@media (max-width: 768px) {
+  .note-area { padding: 20px 0 0; }
+  .note-header { padding: 0 20px 12px; flex-direction: column; align-items: stretch; gap: 16px; }
+  .editor-title { padding: 0; font-size: 20px; margin-bottom: 0; margin-right: 0; text-align: left; }
+  
+  .header-controls { width: 100%; flex-direction: column; align-items: stretch; gap: 12px; }
+  .inference-engine-toggle { width: 100%; justify-content: space-between; }
+  .toggle-switch { flex-grow: 1; display: flex; }
+  .toggle-switch .switch-label { flex-grow: 1; text-align: center; }
+  .tab-navigation-container { width: 100%; }
+  .tab-navigation { width: 100%; }
+  .tab-button { flex-grow: 1; text-align: center; }
+  .theme-selector-container { width: 100%; justify-content: space-between; }
+  .dropdown-select { flex-grow: 1; }
+
+
+  .polish-gemini-button { top: 170px; /* Adjust for stacked header with theme selector */ right: 20px;}
+  [data-theme="brutalist"] .polish-gemini-button { top: 170px; /* Adjust for stacked header */ right: 20px;} /* Ensure specificity */
+
+
+  .note-content-wrapper { padding: 0 20px 20px; margin-top: 5px; }
+  .recording-interface.is-live { padding-left: 15px; padding-right: 15px; } 
+  #liveWaveformCanvas { max-width: calc(100% - 30px); height: 60px; }
+  .live-recording-timer { font-size: 36px; }
+  .recording-controls { gap: 12px; }
+  .action-button { width: 42px; height: 42px; font-size: 16px; }
+  #exportVideoCaptionButton { width: 42px; height: 42px; font-size: 16px; }
+  .record-button { width: 60px; height: 60px; }
+}
+@media (max-width: 480px) {
+    .recording-controls { gap: 8px; }
+    .action-button, #exportVideoCaptionButton { width: 38px; height: 38px; font-size: 15px; }
+    .record-button { width: 56px; height: 56px; }
+    .polish-gemini-button { font-size: 12px; padding: 6px 10px; }
+}
   display: flex;
   flex-direction: column;
   height: 100%; /* Fill body */
